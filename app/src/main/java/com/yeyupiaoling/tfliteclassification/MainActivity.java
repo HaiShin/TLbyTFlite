@@ -42,6 +42,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.FileNameMap;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -51,7 +53,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
+import okhttp3.Callback;
 import okhttp3.MediaType;
+import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -63,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int LONG_PRESS_DURATION = 500;
     private static final int SAMPLE_COLLECTION_DELAY = 300;
     private static final String TAG = "connection server";
+
 
     private String IMG_PATH;
 
@@ -78,14 +83,18 @@ public class MainActivity extends AppCompatActivity {
     private Map<String, Integer> imageMap = new HashMap<>();
     private Utils imageUtils = new Utils();
     private GlobalApp globalApp ;
-    private static final String REGISTER_URL = "http://106.15.39.182:8080/device/register";
-    private static final String CONNECT_URL = "http://106.15.39.182:8080/device/connect";
-    private static final String DOWNLOAD_URL = "http://106.15.39.182:8080/network/download";
+    private String network_name = "xshell.exe";
+//    private String network_name = "giao.txt";
+//    private String network_name = "MobileNetV2.txt";
+    private String network_version = "v1.0";
+    private static final String REGISTER_URL = "http://106.15.39.182:8081/device/register";
+    private static final String CONNECT_URL = "http://106.15.39.182:8081/device/connect";
+    private static final String DOWNLOAD_URL = "http://106.15.39.182:8081/network/download";
+    private static final String UPLOAD_URL = "http://106.15.39.182:8081/network/upload";
     private static final String DEVICE_NUMBER = "1233211234567";
     private static final String DEVICE_NAME = "giao";
     private String token;
-    private String network_name = "MobileNetV2";
-    private String network_version = "v1.0";
+
 
     @SuppressLint("HandlerLeak")
     private Handler handler = new Handler() {
@@ -207,6 +216,28 @@ public class MainActivity extends AppCompatActivity {
                 }.start();
             };
 
+    //上传模型
+    public final View.OnClickListener upClickListener =
+            view -> {
+
+                new Thread(){
+                    @Override
+                    public void run() {
+                        try {
+                            Message msg = new Message();
+                            msg.what = 2;  //消息发送的标志
+                            msg.obj = "正在上传，请稍后..."; //消息发送的内容如：  Object String 类 int
+                            handler.sendMessage(msg);
+                            upload();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }.start();
+            };
+
+
+
     public final View.OnTouchListener onAddSampleTouchListener =
             (view, motionEvent) -> {
                 switch (motionEvent.getAction()) {
@@ -270,6 +301,7 @@ public class MainActivity extends AppCompatActivity {
         Button upBtn = findViewById(R.id.upload_model);
         connBtn.setOnClickListener(connectionClickListener);
         downBtn.setOnClickListener(downClickListener);
+        upBtn.setOnClickListener(upClickListener);
 
         Button selectImgBtn = findViewById(R.id.select_img_btn);
         Button openCamera = findViewById(R.id.open_camera);
@@ -536,5 +568,107 @@ public class MainActivity extends AppCompatActivity {
         }
         handler.sendMessage(msg);
     }
+
+    private void upload() {
+        String path  = getCacheDir().getAbsolutePath() + File.separator + network_name;
+        String url = UPLOAD_URL + "?network_name=" + network_name;
+        System.out.println(url);
+        upLoadingFile(path,url);
+    }
+
+    /**
+     * 上传文件(支持单个, 多个文件上传)
+     */
+    public void upLoadingFile(String filePath,String url) {
+
+        Message msg = new Message();
+        msg.what = 1;
+        // 1.RequestBody
+        //创建MultipartBody.Builder，用于添加请求的数据
+        MultipartBody.Builder multipartBodyBuilder = new MultipartBody.Builder()
+                .setType(MultipartBody.FORM);
+        File file = new File(filePath); //生成文件
+        if (!file.exists()){
+            msg.obj = "网络文件不存在";
+            handler.sendMessage(msg);
+            return;
+        }
+
+        // 根据文件的后缀名，获得文件类型
+        String fileType = getMimeType(file.getName());
+        //给Builder添加上传的文件
+        multipartBodyBuilder.addFormDataPart(
+                "network_file",  //请求的名字
+                file.getName(), //文件的文字，服务器端用来解析的
+                RequestBody.create(MediaType.parse(fileType), file) //创建RequestBody，把上传的文件放入
+        );
+
+        // 添加其他参数信息, 如果只是单纯的上传文件, 下面的添加其他参数的方法不用调用
+        RequestBody requestBody = multipartBodyBuilder.build();//根据Builder创建请求
+
+        // 2.requestBuilder
+        Request requestBuilderRequest = new Request.Builder()
+                .url(url)
+                .header("Authorization", token)
+                .post(requestBody)
+                .build();
+
+        // 3.OkHttpClient
+        OkHttpClient mOkHttpClient = new OkHttpClient.Builder()
+                .connectTimeout(60000, TimeUnit.SECONDS)
+                .readTimeout(60000, TimeUnit.SECONDS)
+                .writeTimeout(60000, TimeUnit.SECONDS)
+                .build();
+
+        Call call = mOkHttpClient.newCall(requestBuilderRequest);
+
+
+        call.enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                //请求失败监听: 异步请求(非主线程)
+                msg.obj = "文件上传出错";
+                handler.sendMessage(msg);
+                e.printStackTrace();
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                String res = response.body().string();
+                System.out.println(res);
+                try {
+                    JSONObject resJson = new JSONObject(res);
+                    int code = resJson.getInt("code");
+                    if (code == 1) {
+                        msg.obj = "文件上传成功";
+                    } else {
+                        msg.obj = "文件上传失败";
+                    }
+                    handler.sendMessage(msg);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+    }
+
+    /**
+     * 获取文件MimeType
+     *
+     * @param fileName
+     * @return
+     */
+    private static String getMimeType(String fileName) {
+        FileNameMap filenameMap = URLConnection.getFileNameMap();
+        String contentType = filenameMap.getContentTypeFor(fileName);
+        if (contentType == null) {
+            contentType = "application/octet-stream"; //* exe,所有的可执行程序
+        }
+        return contentType;
+    }
+
+
+
 
 }
