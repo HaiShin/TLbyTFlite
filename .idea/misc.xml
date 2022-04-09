@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DesignSurface">
+    <option name="filePathToZoomLevelMap">
+      <map>
+        <entry key="..\:/AndroidStudioProjects/TFLiteClassification/app/src/main/res/drawable-v24/ic_launcher_foreground.xml" value="0.1535" />
+        <entry key="..\:/AndroidStudioProjects/TFLiteClassification/app/src/main/res/drawable/ic_launcher_background.xml" value="0.1535" />
+        <entry key="..\:/AndroidStudioProjects/TFLiteClassification/app/src/main/res/drawable/toggle_widget_background.xml" value="0.1145" />
+        <entry key="..\:/AndroidStudioProjects/TFLiteClassification/app/src/main/res/layout/activity_camera.xml" value="0.18489583333333334" />
+        <entry key="..\:/AndroidStudioProjects/TFLiteClassification/app/src/main/res/layout/activity_main.xml" value="0.2" />
+      </map>
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_11" project-jdk-name="1.8" project-jdk-type="JavaSDK">
+    <output url="file://$PROJECT_DIR$/build/classes" />
+  </component>
+  <component name="ProjectType">
+    <option name="id" value="Android" />
+  </component>
+</project>
