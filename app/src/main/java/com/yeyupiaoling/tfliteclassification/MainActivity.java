@@ -80,7 +80,7 @@ public class MainActivity extends AppCompatActivity {
     private long sampleCollectionButtonPressedTime;
     private final Handler sampleCollectionHandler = new Handler(Looper.getMainLooper());
 
-    private Map<String, Integer> imageMap = new HashMap<>();
+    private Map<String, List<float[][][]>> imageMap = new HashMap<>();
     private Utils imageUtils = new Utils();
     private GlobalApp globalApp ;
     private String network_name = "MobileNetV2";
@@ -148,22 +148,14 @@ public class MainActivity extends AppCompatActivity {
                         });
                     }
 
-                    try {
-                        globalApp.getTlModel().addSample(rgbImage, sampleClass).get();
-                    } catch (ExecutionException e) {
-                        String show_text = "添加模型报错！";
-                        textView.setText(show_text);
-                        throw new RuntimeException("Failed to add sample to model", e.getCause());
 
-                    } catch (InterruptedException e) {
-                        // no-op
-                    }
 
                     if (!imageMap.containsKey(sampleClass)){
-                        imageMap.put(sampleClass, 1);
+                        List<float[][][]> imgList = new ArrayList<>();
+                        imgList.add(rgbImage);
+                        imageMap.put(sampleClass, imgList);
                     } else {
-                        int val = imageMap.get(sampleClass);
-                        imageMap.put(sampleClass, val+1);
+                        imageMap.get(sampleClass).add(rgbImage);
                     }
 
                     String show_text = printImages();
@@ -178,16 +170,38 @@ public class MainActivity extends AppCompatActivity {
 
     private String printImages() {
         StringBuilder result = new StringBuilder("已记录");
-        for (Map.Entry<String, Integer> entry : imageMap.entrySet()) {
+        for (Map.Entry<String, List<float[][][]>> entry : imageMap.entrySet()) {
 
-            result.append(" 类别").append(entry.getKey()).append("有").append(entry.getValue()).append("涨 \n");
+            result.append(" 类别").append(entry.getKey()).append("有").append(entry.getValue().size()).append("涨 \n");
         }
         return result.toString();
     }
 
     public final View.OnClickListener trainClickListener =
             view -> {
+                globalApp = ((GlobalApp) getApplicationContext());
+                try {
+                    globalApp.setTlModel(new TransferLearningModelWrapper(MainActivity.this));
+                } catch (Exception e) {
+                    throw new RuntimeException("加载模型报错！",e);
+                }
+                for (Map.Entry<String, List<float[][][]>> entry:
+                        imageMap.entrySet()) {
+                    for (float[][][] rgbImage :
+                            entry.getValue()) {
+                        String sampleClass = entry.getKey();
+                        try {
+                            globalApp.getTlModel().addSample(rgbImage, sampleClass).get();
+                        } catch (ExecutionException e) {
+                            String show_text = "添加模型报错！";
+                            textView.setText(show_text);
+                            throw new RuntimeException("Failed to add sample to model", e.getCause());
 
+                        } catch (InterruptedException e) {
+                            // no-op
+                        }
+                    }
+                }
 
                 globalApp.getTlModel().enableTraining((epoch, loss) -> {
                                 Message msg = new Message();
@@ -261,12 +275,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        globalApp = ((GlobalApp) getApplicationContext());
-        try {
-            globalApp.setTlModel(new TransferLearningModelWrapper(MainActivity.this));
-        } catch (Exception e) {
-            throw new RuntimeException("加载模型报错！",e);
-        }
+//        globalApp = ((GlobalApp) getApplicationContext());
+//        try {
+//            globalApp.setTlModel(new TransferLearningModelWrapper(MainActivity.this));
+//        } catch (Exception e) {
+//            throw new RuntimeException("加载模型报错！",e);
+//        }
 //        globalApp.getTlModel().saveModel(getCacheDir().getAbsolutePath());
         setContentView(R.layout.activity_main);
         if (!hasPermission()) {
