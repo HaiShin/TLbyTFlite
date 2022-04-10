@@ -83,14 +83,13 @@ public class MainActivity extends AppCompatActivity {
     private Map<String, Integer> imageMap = new HashMap<>();
     private Utils imageUtils = new Utils();
     private GlobalApp globalApp ;
-    private String network_name = "xshell.exe";
-//    private String network_name = "giao.txt";
-//    private String network_name = "MobileNetV2.txt";
+    private String network_name = "MobileNetV2";
+    private String network_file_name = network_name+".tflite";
     private String network_version = "v1.0";
-    private static final String REGISTER_URL = "http://106.15.39.182:8081/device/register";
-    private static final String CONNECT_URL = "http://106.15.39.182:8081/device/connect";
-    private static final String DOWNLOAD_URL = "http://106.15.39.182:8081/network/download";
-    private static final String UPLOAD_URL = "http://106.15.39.182:8081/network/upload";
+    private static final String REGISTER_URL = "http://106.15.39.182:8080/device/register";
+    private static final String CONNECT_URL = "http://106.15.39.182:8080/device/connect";
+    private static final String DOWNLOAD_URL = "http://106.15.39.182:8080/network/download";
+    private static final String UPLOAD_URL = "http://106.15.39.182:8080/network/upload";
     private static final String DEVICE_NUMBER = "1233211234567";
     private static final String DEVICE_NAME = "giao";
     private String token;
@@ -124,6 +123,30 @@ public class MainActivity extends AppCompatActivity {
                     Bitmap bitmap = BitmapFactory.decodeStream(fis);
                     float[][][] rgbImage = imageUtils.prepareCameraImage(bitmap, 0);
                     String sampleClass = getClassNameFromResourceId(view.getId());
+
+                    //给类别按钮添加第一张图片
+                    if (!imageMap.containsKey(sampleClass)){
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                ImageView imageView = null;
+                                if (sampleClass.equals("1")) {
+                                    imageView = findViewById(R.id.class_img_1);
+                                } else if (sampleClass.equals("2")) {
+                                    imageView = findViewById(R.id.class_img_2);
+                                } else if (sampleClass.equals("3")) {
+                                    imageView = findViewById(R.id.class_img_3);
+                                } else {
+                                    imageView = findViewById(R.id.class_img_4);
+                                }
+                                if (imageView!=null) {
+                                    updateClassBtnImage(imageView, bitmap);
+                                }else{
+                                    System.out.println("AEL einai null toimg");
+                                }
+                            }
+                        });
+                    }
 
                     try {
                         globalApp.getTlModel().addSample(rgbImage, sampleClass).get();
@@ -164,10 +187,12 @@ public class MainActivity extends AppCompatActivity {
 
     public final View.OnClickListener trainClickListener =
             view -> {
-                Message msg = new Message();
-                msg.what = 2;
+
+
                 globalApp.getTlModel().enableTraining((epoch, loss) -> {
-                                msg.obj = epoch +","+loss;
+                                Message msg = new Message();
+                                msg.what = 2;
+                                msg.obj = (epoch +","+loss).toString();
                                 handler.sendMessage(msg);
                         });
             };
@@ -185,10 +210,7 @@ public class MainActivity extends AppCompatActivity {
                     public void run() {
                         try {
                             doRegister(REGISTER_URL);
-                            Message msg = new Message();
-                            msg.what = 1;  //消息发送的标志
-                            msg.obj = "服务器连接成功"; //消息发送的内容如：  Object String 类 int
-                            handler.sendMessage(msg);
+
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -234,44 +256,6 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                 }.start();
-            };
-
-
-
-    public final View.OnTouchListener onAddSampleTouchListener =
-            (view, motionEvent) -> {
-                switch (motionEvent.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                        isCollectingSamples = true;
-                        sampleCollectionButtonPressedTime = SystemClock.uptimeMillis();
-                        sampleCollectionHandler.post(
-                                new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        long timePressed =
-                                                SystemClock.uptimeMillis() - sampleCollectionButtonPressedTime;
-                                        view.findViewById(view.getId()).performClick();
-                                        if (timePressed < LONG_PRESS_DURATION) {
-                                            sampleCollectionHandler.postDelayed(this, LONG_PRESS_DURATION);
-                                        } else if (isCollectingSamples) {
-                                            String className = getClassNameFromResourceId(view.getId());
-//                                            viewModel.setNumCollectedSamples(
-//                                                    viewModel.getNumSamples().getValue().get(className) + 1);
-                                            sampleCollectionHandler.postDelayed(this, SAMPLE_COLLECTION_DELAY);
-//                                            viewModel.setSampleCollectionLongPressed(true);
-                                        }
-                                    }
-                                });
-                        break;
-                    case MotionEvent.ACTION_UP:
-                        sampleCollectionHandler.removeCallbacksAndMessages(null);
-                        isCollectingSamples = false;
-//                        viewModel.setSampleCollectionLongPressed(false);
-                        break;
-                    default:
-                        break;
-                }
-                return true;
             };
 
     @Override
@@ -439,6 +423,10 @@ public class MainActivity extends AppCompatActivity {
                 if (code == 1) {
                     JSONObject data = jsonObject.getJSONObject("data");
                     token = data.getString("token");
+                    Message msg = new Message();
+                    msg.what = 1;  //消息发送的标志
+                    msg.obj = "服务器连接成功"; //消息发送的内容如：  Object String 类 int
+                    handler.sendMessage(msg);
                 } else if (code == 201) { //已注册，则通过连接去返回token
                     doConnect(CONNECT_URL);
                 } else {
@@ -447,8 +435,11 @@ public class MainActivity extends AppCompatActivity {
                     msg.obj = "设备注册失败，请检查网络设置。"; //消息发送的内容如：  Object String 类 int
                     handler.sendMessage(msg);
                 }
-
-
+            } else {
+                Message msg = new Message();
+                msg.what = 1;  //消息发送的标志
+                msg.obj = "设备注册失败，请检查网络设置。"; //消息发送的内容如：  Object String 类 int
+                handler.sendMessage(msg);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -481,6 +472,10 @@ public class MainActivity extends AppCompatActivity {
                 if (code == 1) {
                     JSONObject data = jsonObject.getJSONObject("data");
                     token = data.getString("token");
+                    Message msg = new Message();
+                    msg.what = 1;  //消息发送的标志
+                    msg.obj = "服务器连接成功"; //消息发送的内容如：  Object String 类 int
+                    handler.sendMessage(msg);
                 } else {
                     Message msg = new Message();
                     msg.what = 1;  //消息发送的标志
@@ -555,7 +550,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         InputStream inputStream = response.byteStream();
-        String filePath = getCacheDir().getAbsolutePath() + "/" + network_name;
+        String filePath = getCacheDir().getAbsolutePath() + "/" + network_file_name;
 
         boolean result = WriteFile4InputStream(filePath, inputStream);
         Message msg = new Message();
@@ -570,7 +565,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void upload() {
-        String path  = getCacheDir().getAbsolutePath() + File.separator + network_name;
+        String path  = getCacheDir().getAbsolutePath() + File.separator + network_file_name;
         String url = UPLOAD_URL + "?network_name=" + network_name;
         System.out.println(url);
         upLoadingFile(path,url);
@@ -627,7 +622,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call call, IOException e) {
                 //请求失败监听: 异步请求(非主线程)
-                msg.obj = "文件上传出错";
+                msg.obj = "文件上传出错,请重试";
                 handler.sendMessage(msg);
                 e.printStackTrace();
             }
@@ -666,6 +661,10 @@ public class MainActivity extends AppCompatActivity {
             contentType = "application/octet-stream"; //* exe,所有的可执行程序
         }
         return contentType;
+    }
+
+    public void updateClassBtnImage(ImageView imageView,Bitmap bitmap){
+        imageView.setImageBitmap(bitmap);
     }
 
 

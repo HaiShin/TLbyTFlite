@@ -110,12 +110,10 @@
                 android:layout_margin="8dp"
                 android:src="@drawable/ic_label_triangle" />
 
-            <TextView
-                android:tag="subtitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:textColor="@color/black" />
+            <ImageView
+                android:id="@+id/class_img_1"
+                android:layout_height="50dp"
+                android:layout_width="match_parent"/>
         </LinearLayout>
 
         <LinearLayout
@@ -132,12 +130,10 @@
                 android:layout_margin="8dp"
                 android:src="@drawable/ic_label_circle" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:tag="subtitle"
-                android:textColor="@color/black"
-                android:textSize="16sp" />
+            <ImageView
+                android:id="@+id/class_img_2"
+                android:layout_height="50dp"
+                android:layout_width="match_parent"/>
         </LinearLayout>
 
         <LinearLayout
@@ -154,12 +150,10 @@
                 android:layout_margin="8dp"
                 android:src="@drawable/ic_label_x" />
 
-            <TextView
-                android:tag="subtitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:textColor="@color/black" />
+            <ImageView
+                android:id="@+id/class_img_3"
+                android:layout_height="50dp"
+                android:layout_width="match_parent"/>
         </LinearLayout>
 
         <LinearLayout
@@ -176,12 +170,10 @@
                 android:layout_margin="8dp"
                 android:src="@drawable/ic_label_square" />
 
-            <TextView
-                android:tag="subtitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:textColor="@color/black" />
+            <ImageView
+                android:id="@+id/class_img_4"
+                android:layout_height="50dp"
+                android:layout_width="match_parent"/>
         </LinearLayout>
 
     </LinearLayout>
